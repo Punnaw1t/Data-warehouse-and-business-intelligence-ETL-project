@@ -15,6 +15,7 @@ class EtlJobForMajor:
             .config("spark.jars.packages", "org.postgresql:postgresql:42.5.0") 
             .getOrCreate()
         )
+        
         self.input_file = kwargs['source']
         self.log = logging.getLogger(__name__)
         
