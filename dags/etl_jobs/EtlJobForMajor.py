@@ -26,7 +26,7 @@ class EtlJobForMajor:
     
         elif (kwargs.get('destination')):
             self.output = kwargs['destination']
-            self.load_type = "parquet"
+            self.load_type = "csv"
     
 
     def extract_transactions(self):
@@ -81,10 +81,10 @@ class EtlJobForMajor:
         return df_favorites
 
     def load(self, load_type, df_to_load):
-        if (load_type == 'parquet'):
-            df_to_load.write.mode("overwrite").parquet(self.output)
+        if (load_type == 'csv'):
+            df_to_load.write.mode("overwrite").csv(self.output, header=True)
             self.log.info(
-                    'Data successfully written on the path: %s',
+                    'Data successfully written to CSV on the path: %s',
                     self.output)
         if (load_type == 'database'):
             #*********************** pass ******************************
@@ -108,7 +108,7 @@ class EtlJobForMajor:
             
             #****************************************           
             
-        if (load_type not in ['parquet', 'database']):
+        if (load_type not in ['csv', 'database']):
             self.log.info("The current output format is yet not supported")
 
     def run(self):
