@@ -1,0 +1,71 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=warehouse
+    ports:
+      - '5432:5432'
+    networks:
+      - spark-network
+  spark:
+    image: apache/spark:latest
+    volumes:
+      - ./data:/opt/data:rw
+      # - type: bind
+        # source: ./data/
+        # target: /opt/data
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+    user: root
+    ports:
+      - '7077:7077'
+      - '18080:8080'
+    networks:
+      - spark-network
+  spark-worker:
+    image: apache/spark:latest
+    deploy:
+      replicas: 1
+    volumes:
+      - ./data:/opt/data:rw
+      # - type: bind
+        # source: ./data
+        # target: /opt/data
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark:7077
+      - SPARK_WORKER_MEMORY=1G
+      - SPARK_WORKER_CORES=1
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+    user: root
+    networks:
+      - spark-network
+  etl:
+    build: 
+      context: .
+      dockerfile: ./Dockerfile
+    platform: linux/arm64
+    volumes:
+      - ./data:/opt/data:rw
+    user: root
+    environment:
+      - SPARK_MASTER_URL=local[*]
+    networks:
+      - spark-network
+    depends_on:
+      - db
+      - spark
+networks:
+  spark-network:
+    driver: bridge
+
