@@ -16,6 +16,8 @@ RUN apt-get update && \
     && apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+# 2. Set Java Home (Dynamic for x86 และ arm64)
+ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-arm64
 
 
 RUN ln -s $(readlink -f /usr/bin/java | sed "s:bin/java::") /opt/jdk
@@ -27,41 +29,31 @@ ENV AIRFLOW_HOME=/airflow
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-
 RUN mkdir -p ${AIRFLOW_HOME}/dags ${AIRFLOW_HOME}/logs ${AIRFLOW_HOME}/plugins
 
 WORKDIR /app
 
-# 4. Install Python dependencies (use Constraints for prevent system Build Error)
+# 4. Install Python dependencies 
 COPY requirements.txt ./
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir \
     --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.8.1/constraints-3.9.txt" \
     -r requirements.txt
 
+RUN pip install --no-cache-dir redis pyspark python-dotenv psycopg2-binary
+
+
 # 5. Copy application code & Airflow files
 COPY . /app
 COPY dags ${AIRFLOW_HOME}/dags
 
-# ตรวจสอบและ Copy plugins (ถ้ามี)
-RUN if [ -d "plugins" ]; then cp -r plugins/* ${AIRFLOW_HOME}/plugins/ || true; fi
-
-# 6. Initialize Airflow (Local Testing / Take-home test)
-
-RUN airflow db init
-
-# Create default user (User: airflow / Pass: airflow)
-RUN airflow users create \
-    --username airflow \
-    --firstname Air \
-    --lastname Flow \
-    --role Admin \
-    --email airflow@example.com \
-    --password airflow || true
-
-# 7. Permissions & Ports
+# 6. Permissions
+# Change General User Can Write Log
 RUN chmod -R 777 ${AIRFLOW_HOME}
+
+
+
 EXPOSE 8080 5555
 
-
+# Default command (override by docker-compose)
 CMD ["airflow", "webserver"]
